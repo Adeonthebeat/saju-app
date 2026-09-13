@@ -26,14 +26,85 @@ function SegmentedButton({
   );
 }
 
+function NumberSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  ariaLabel,
+  pad = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: number[];
+  placeholder: string;
+  ariaLabel: string;
+  pad?: boolean;
+}) {
+  return (
+    <select
+      className="select-input"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      aria-label={ariaLabel}
+      required
+    >
+      <option value="" disabled>
+        {placeholder}
+      </option>
+      {options.map((option) => (
+        <option key={option} value={String(option)}>
+          {pad ? String(option).padStart(2, '0') : option}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1900 + 1 }, (_, i) => CURRENT_YEAR - i);
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
 export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistory }: InputScreenProps) {
   const [gender, setGender] = useState<Gender>('male');
   const [calendar, setCalendar] = useState<Calendar>('solar');
-  const [birthDate, setBirthDate] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
   const [isTimeUnknown, setIsTimeUnknown] = useState(false);
-  const [birthTime, setBirthTime] = useState('');
+  const [birthHour, setBirthHour] = useState('');
+  const [birthMinute, setBirthMinute] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isTakingLong, setIsTakingLong] = useState(false);
+
+  const dayOptions = (() => {
+    const year = Number(birthYear);
+    const month = Number(birthMonth);
+    const max = birthYear && birthMonth ? daysInMonth(year, month) : 31;
+    return Array.from({ length: max }, (_, i) => i + 1);
+  })();
+
+  const clampBirthDay = (year: string, month: string) => {
+    if (birthDay && year && month && Number(birthDay) > daysInMonth(Number(year), Number(month))) {
+      setBirthDay('');
+    }
+  };
+
+  const handleYearChange = (value: string) => {
+    setBirthYear(value);
+    clampBirthDay(value, birthMonth);
+  };
+
+  const handleMonthChange = (value: string) => {
+    setBirthMonth(value);
+    clampBirthDay(birthYear, value);
+  };
 
   useEffect(() => {
     if (!isSubmitting) return;
@@ -44,20 +115,22 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!birthDate) {
-      setValidationError('생년월일을 입력해주세요.');
+    if (!birthYear || !birthMonth || !birthDay) {
+      setValidationError('생년월일을 모두 선택해주세요.');
       return;
     }
-    if (!isTimeUnknown && !birthTime) {
-      setValidationError('태어난 시간을 입력하거나, 시간을 모른다면 위 체크박스를 눌러주세요.');
+    if (!isTimeUnknown && (!birthHour || !birthMinute)) {
+      setValidationError('태어난 시간을 선택하거나, 시간을 모른다면 위 체크박스를 눌러주세요.');
       return;
     }
     setValidationError(null);
     setIsTakingLong(false);
 
+    const pad = (value: string) => value.padStart(2, '0');
+
     onSubmit({
-      birth_date: birthDate,
-      birth_time: isTimeUnknown ? null : `${birthTime}:00`,
+      birth_date: `${birthYear}-${pad(birthMonth)}-${pad(birthDay)}`,
+      birth_time: isTimeUnknown ? null : `${pad(birthHour)}:${pad(birthMinute)}:00`,
       is_time_unknown: isTimeUnknown,
       calendar,
       gender,
@@ -99,17 +172,30 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
         </div>
 
         <div className="field-group">
-          <label className="field-group__label" htmlFor="birth-date">
-            생년월일
-          </label>
-          <input
-            id="birth-date"
-            type="date"
-            className="text-input"
-            value={birthDate}
-            onChange={(event) => setBirthDate(event.target.value)}
-            required
-          />
+          <span className="field-group__label">생년월일</span>
+          <div className="select-row">
+            <NumberSelect
+              value={birthYear}
+              onChange={handleYearChange}
+              options={YEAR_OPTIONS}
+              placeholder="년"
+              ariaLabel="태어난 연도"
+            />
+            <NumberSelect
+              value={birthMonth}
+              onChange={handleMonthChange}
+              options={MONTH_OPTIONS}
+              placeholder="월"
+              ariaLabel="태어난 월"
+            />
+            <NumberSelect
+              value={birthDay}
+              onChange={setBirthDay}
+              options={dayOptions}
+              placeholder="일"
+              ariaLabel="태어난 일"
+            />
+          </div>
         </div>
 
         <div className="field-group">
@@ -126,17 +212,25 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
 
         {!isTimeUnknown && (
           <div className="field-group">
-            <label className="field-group__label" htmlFor="birth-time">
-              태어난 시간
-            </label>
-            <input
-              id="birth-time"
-              type="time"
-              className="text-input"
-              value={birthTime}
-              onChange={(event) => setBirthTime(event.target.value)}
-              required
-            />
+            <span className="field-group__label">태어난 시간</span>
+            <div className="select-row">
+              <NumberSelect
+                value={birthHour}
+                onChange={setBirthHour}
+                options={HOUR_OPTIONS}
+                placeholder="시"
+                ariaLabel="태어난 시"
+                pad
+              />
+              <NumberSelect
+                value={birthMinute}
+                onChange={setBirthMinute}
+                options={MINUTE_OPTIONS}
+                placeholder="분"
+                ariaLabel="태어난 분"
+                pad
+              />
+            </div>
           </div>
         )}
 
