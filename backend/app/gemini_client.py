@@ -21,6 +21,11 @@ PROMPT_TEMPLATE = """\
 격국: {jeonggyeok}
 용신: {yongsin}
 
+[현재 시점 — 반드시 이 값을 그대로 쓰고, 나이나 대운 시기를 임의로 가정하지 마세요]
+오늘 날짜: {today}
+현재 만 나이: {current_age}세
+현재 대운: {current_daewoon}
+
 [십신 (일간 기준 각 기둥의 관계)]
 {shipsin_text}
 
@@ -33,7 +38,8 @@ PROMPT_TEMPLATE = """\
 [대운] ({daewoon_direction})
 {daewoon_text}
 
-다음 6개 항목을 각각 위 형식대로 작성하세요.
+다음 6개 항목을 각각 위 형식대로 작성하세요. 문단을 나눌 때는 실제 줄바꿈만
+쓰고, 줄바꿈을 나타내는 기호 문자(백슬래시+n 등)를 텍스트로 쓰지 마세요.
 
 1. career_fit — 타고난 직업·적성 (그릇 진단)
    - 조직형 vs 독립형(회사원 vs 프리랜서·사업가 팔자) 중 어느 쪽에 가까운지
@@ -41,8 +47,9 @@ PROMPT_TEMPLATE = """\
    - 나에게 맞는 직업 환경(대기업/공공기관/스타트업/1인 비즈니스 중 어느 쪽인지)
 
 2. career_timing — 타이밍과 이동수 (운의 흐름)
-   - 현재 대운(및 흐름)을 근거로 올해 즈음의 퇴사·이직·시험운(충·극·합 여부)
-   - 10년 대운으로 보는 커리어 전성기 타이밍이 언제인지
+   - 위에 명시된 '현재 만 나이'와 '현재 대운'을 근거로 올해 즈음의
+     퇴사·이직·시험운(충·극·합 여부)
+   - 10년 대운으로 보는 커리어 전성기 타이밍이 언제인지(몇 살 대운인지 명시)
    - 지금은 버텨야 할 때인지, 판을 엎고 도전해야 할 때인지
 
 3. side_business — 사주 기반 부업·N잡 (숨은 재주 발현)
@@ -99,6 +106,21 @@ def _format_daewoon(pillars: PillarResult) -> str:
     return "\n".join(lines) if lines else "(정보 없음)"
 
 
+def _format_current_daewoon(pillars: PillarResult) -> str:
+    if pillars.current_daewoon is None:
+        return "아직 첫 대운 시작 전(유년기)"
+    return f"{pillars.current_daewoon.gan_ji} ({pillars.current_daewoon.start_age}세~)"
+
+
+def _strip_literal_escapes(result: SajuAnalysisResult) -> SajuAnalysisResult:
+    """Gemini가 가끔 실제 개행 대신 문자 그대로의 '\\n'을 출력하는 경우를 보정한다."""
+    cleaned = {
+        field_name: value.replace("\\n", "\n") if isinstance(value, str) else value
+        for field_name, value in result.model_dump().items()
+    }
+    return SajuAnalysisResult(**cleaned)
+
+
 def analyze_saju(*, gender: str, pillars: PillarResult) -> SajuAnalysisResult:
     settings = get_settings()
 
@@ -111,6 +133,9 @@ def analyze_saju(*, gender: str, pillars: PillarResult) -> SajuAnalysisResult:
         five_elements=pillars.five_elements,
         jeonggyeok=pillars.jeonggyeok,
         yongsin=pillars.yongsin,
+        today=pillars.today.isoformat(),
+        current_age=pillars.current_age,
+        current_daewoon=_format_current_daewoon(pillars),
         shipsin_text=_format_shipsin(pillars),
         sibiunseong_text=_format_sibiunseong(pillars),
         sinsal_text=_format_sinsal(pillars),
@@ -126,4 +151,4 @@ def analyze_saju(*, gender: str, pillars: PillarResult) -> SajuAnalysisResult:
             response_schema=SajuAnalysisResult,
         ),
     )
-    return SajuAnalysisResult.model_validate_json(response.text)
+    return _strip_literal_escapes(SajuAnalysisResult.model_validate_json(response.text))

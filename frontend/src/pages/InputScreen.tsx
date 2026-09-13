@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import type { Calendar, Gender, SajuAnalyzeRequest } from '../api/saju';
 import { ChevronRight } from '../components/icons';
 import './InputScreen.css';
@@ -33,6 +33,13 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
   const [isTimeUnknown, setIsTimeUnknown] = useState(false);
   const [birthTime, setBirthTime] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isTakingLong, setIsTakingLong] = useState(false);
+
+  useEffect(() => {
+    if (!isSubmitting) return;
+    const timer = window.setTimeout(() => setIsTakingLong(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [isSubmitting]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,6 +53,7 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
       return;
     }
     setValidationError(null);
+    setIsTakingLong(false);
 
     onSubmit({
       birth_date: birthDate,
@@ -136,6 +144,13 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
       </form>
 
       <div className="input-screen__cta">
+        {isSubmitting && (
+          <p className="input-screen__loading-hint">
+            {isTakingLong
+              ? '서버가 오랜만에 깨어나는 중일 수 있어요. 최대 30초 정도 걸릴 수 있어요.'
+              : '사주를 분석하고 있어요. 잠시만 기다려주세요.'}
+          </p>
+        )}
         <button type="submit" form="saju-input-form" className="primary-button" disabled={isSubmitting}>
           {isSubmitting ? '분석하는 중…' : '사주 분석하기'}
         </button>

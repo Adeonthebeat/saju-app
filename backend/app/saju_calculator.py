@@ -94,6 +94,11 @@ class PillarResult:
     sibiunseong: list[SibiunseongEntry] = field(default_factory=list)
     daewoon_direction: str = ""  # "순행" | "역행"
     daewoon: list[DaewoonEntry] = field(default_factory=list)
+    # "지금 몇 살/무슨 대운인지"는 팔자 조합과 무관하게 매 요청 시점(오늘 날짜)에
+    # 따라 달라지므로 캐시하지 않고, 매번 이 함수 호출 시점 기준으로 계산한다.
+    today: date = field(default_factory=date.today)
+    current_age: int = 0
+    current_daewoon: DaewoonEntry | None = None
 
 
 def calculate_pillars(
@@ -157,6 +162,20 @@ def calculate_pillars(
         DaewoonEntry(start_age=entry.start_age, gan_ji=entry.gan_ji.hangul) for entry in daewoon.entries
     ]
 
+    # "지금 몇 살이고 어느 대운인지"는 Gemini가 추측하게 두지 않고 여기서 사실로
+    # 확정한다 — 만 나이는 실제 태어난(양력 환산) 날짜 기준으로 센다.
+    solar_birth_date = kst_moment.date()
+    today = date.today()
+    current_age = today.year - solar_birth_date.year - (
+        (today.month, today.day) < (solar_birth_date.month, solar_birth_date.day)
+    )
+    current_daewoon = None
+    for entry in daewoon_entries:
+        if entry.start_age <= current_age:
+            current_daewoon = entry
+        else:
+            break
+
     return PillarResult(
         year_pillar=saju.year_pillar.hangul,
         month_pillar=saju.month_pillar.hangul,
@@ -170,4 +189,7 @@ def calculate_pillars(
         sibiunseong=sibiunseong,
         daewoon_direction="순행" if daewoon.forward else "역행",
         daewoon=daewoon_entries,
+        today=today,
+        current_age=current_age,
+        current_daewoon=current_daewoon,
     )

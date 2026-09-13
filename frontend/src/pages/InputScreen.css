@@ -123,6 +123,13 @@
   padding: var(--space-4) var(--space-4) calc(var(--space-4) + 34px);
 }
 
+.input-screen__loading-hint {
+  margin: 0 0 var(--space-2);
+  text-align: center;
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-subtle);
+}
+
 .primary-button {
   width: 100%;
   min-height: 52px;
