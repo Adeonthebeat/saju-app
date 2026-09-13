@@ -33,6 +33,7 @@ function NumberSelect({
   placeholder,
   ariaLabel,
   pad = false,
+  wide = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -40,10 +41,11 @@ function NumberSelect({
   placeholder: string;
   ariaLabel: string;
   pad?: boolean;
+  wide?: boolean;
 }) {
   return (
     <select
-      className="select-input"
+      className={wide ? 'select-input select-input--wide' : 'select-input'}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       aria-label={ariaLabel}
@@ -180,6 +182,7 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
               options={YEAR_OPTIONS}
               placeholder="년"
               ariaLabel="태어난 연도"
+              wide
             />
             <NumberSelect
               value={birthMonth}

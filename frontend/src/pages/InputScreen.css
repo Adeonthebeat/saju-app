@@ -92,6 +92,10 @@
   font-family: inherit;
 }
 
+.select-input--wide {
+  flex: 1.6;
+}
+
 .select-input:invalid {
   color: var(--color-text-hint);
 }
