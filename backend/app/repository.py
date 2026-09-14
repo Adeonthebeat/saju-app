@@ -78,16 +78,21 @@ def _create_analysis(chart_id: str, gender: str, pillars: PillarResult) -> dict:
     settings = get_settings()
     sb = get_supabase()
 
+    # saju_chart_id에 unique 제약이 있으므로 insert 대신 upsert를 쓴다 — 이전에
+    # 실패해서 status='failed' 행이 이미 있어도(또는 동시 요청이 먼저 완료했어도)
+    # 그 자리에 최신 결과로 덮어쓴다. insert만 쓰면 실패 행이 자리를 차지한 채
+    # 영구히 재시도가 막히는 문제가 있었다.
     try:
         gemini_result = gemini_client.analyze_saju(gender=gender, pillars=pillars)
     except Exception as exc:
-        sb.table("saju_analyses").insert(
+        sb.table("saju_analyses").upsert(
             {
                 "saju_chart_id": chart_id,
                 "status": "failed",
                 "error_message": str(exc),
                 "gemini_model": settings.gemini_model,
-            }
+            },
+            on_conflict="saju_chart_id",
         ).execute()
         raise
 
@@ -102,18 +107,8 @@ def _create_analysis(chart_id: str, gender: str, pillars: PillarResult) -> dict:
         "luck_improvement": gemini_result.luck_improvement,
         "gemini_model": settings.gemini_model,
     }
-    try:
-        result = sb.table("saju_analyses").insert(row).execute()
-        return result.data[0]
-    except APIError as exc:
-        if exc.code != UNIQUE_VIOLATION:
-            raise
-        # 동시 요청이 이미 이 팔자 조합을 분석해 저장했다면 그 결과를 재사용한다
-        # (Gemini는 이미 호출했지만, DB에는 먼저 도착한 결과만 남긴다).
-        existing = _find_completed_analysis(chart_id)
-        if existing is None:
-            raise
-        return existing
+    result = sb.table("saju_analyses").upsert(row, on_conflict="saju_chart_id").execute()
+    return result.data[0]
 
 
 def get_or_create_analysis(gender: str, pillars: PillarResult) -> tuple[dict, dict, bool]:
