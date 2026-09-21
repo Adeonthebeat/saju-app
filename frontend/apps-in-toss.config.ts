@@ -3,7 +3,7 @@ import { defineConfig } from '@apps-in-toss/web-framework/config';
 export default defineConfig({
   appName: 'ade20260906',
   brand: {
-    primaryColor: '#3182F6', // 화면에 노출될 앱의 기본 색상으로 바꿔주세요.
+    primaryColor: '#7C3AED', // 앱 브랜드 색(보라/자주 계열) — src/styles/tokens.css의 --brand-primary와 맞춤
   },
   permissions: [],
   webBundleDir: 'dist',
