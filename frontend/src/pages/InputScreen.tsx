@@ -114,9 +114,7 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
     return () => window.clearTimeout(timer);
   }, [isSubmitting]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const trySubmit = () => {
     if (!birthYear || !birthMonth || !birthDay) {
       setValidationError('생년월일을 모두 선택해주세요.');
       return;
@@ -139,7 +137,15 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
     });
   };
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    trySubmit();
+  };
+
   const displayError = validationError ?? errorMessage;
+  // errorMessage(부모가 준 API 실패)만 재시도 가능 — 입력은 이미 유효했으므로
+  // 그대로 다시 보낸다. validationError는 사용자가 입력을 고쳐야 하니 버튼을 안 보인다.
+  const canRetry = !validationError && Boolean(errorMessage);
 
   return (
     <div className="canvas input-screen">
@@ -238,6 +244,11 @@ export function InputScreen({ isSubmitting, errorMessage, onSubmit, onOpenHistor
         )}
 
         {displayError && <p className="input-screen__error">{displayError}</p>}
+        {canRetry && (
+          <button type="button" className="input-screen__retry-button" onClick={trySubmit} disabled={isSubmitting}>
+            다시 시도
+          </button>
+        )}
       </form>
 
       <div className="input-screen__cta">

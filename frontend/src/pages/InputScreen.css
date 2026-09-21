@@ -130,6 +130,24 @@
   color: var(--color-danger-text);
 }
 
+.input-screen__retry-button {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-bg-canvas);
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-text-default);
+  font-size: var(--font-size-body-small);
+  font-weight: var(--font-weight-subtitle);
+  cursor: pointer;
+}
+
+.input-screen__retry-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .input-screen__cta {
   position: sticky;
   bottom: 0;

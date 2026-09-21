@@ -42,6 +42,23 @@ export function ResultScreen({ result, onRestart, restartLabel = '다시 입력�
 
         {result.cached && <span className="result-screen__badge">이미 분석된 사주예요</span>}
 
+        <div className="result-pillars">
+          <h2 className="result-pillars__title">내 사주 원국</h2>
+          <div className="result-pillars__row">
+            <span className="result-pillars__chip">연주 {result.pillars.year}</span>
+            <span className="result-pillars__chip">월주 {result.pillars.month}</span>
+            <span className="result-pillars__chip">일주 {result.pillars.day}</span>
+            <span className="result-pillars__chip">시주 {result.pillars.hour ?? '모름'}</span>
+          </div>
+          <div className="result-pillars__row">
+            {Object.entries(result.five_elements).map(([element, count]) => (
+              <span className="result-pillars__chip result-pillars__chip--element" key={element}>
+                {element} {count}
+              </span>
+            ))}
+          </div>
+        </div>
+
         {SECTIONS.map((section) => (
           <div className="result-card" key={section.key}>
             <h2 className="result-card__title">{section.title}</h2>
