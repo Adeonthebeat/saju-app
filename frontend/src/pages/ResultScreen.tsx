@@ -1,3 +1,5 @@
+import { Share } from '@apps-in-toss/web-framework';
+import { useState } from 'react';
 import type { SajuAnalyzeResponse } from '../api/saju';
 import './ResultScreen.css';
 
@@ -16,7 +18,23 @@ const SECTIONS: Array<{ key: keyof SajuAnalyzeResponse['analysis']; title: strin
   { key: 'luck_improvement', title: '직업 개운법' },
 ];
 
+const APP_PATH = 'intoss://ade20260906';
+
 export function ResultScreen({ result, onRestart, restartLabel = '다시 입력하기' }: ResultScreenProps) {
+  const [shareError, setShareError] = useState<string | null>(null);
+
+  const handleShare = async () => {
+    setShareError(null);
+    try {
+      const link = await Share.createLink({ path: APP_PATH });
+      await Share.sendMessage({
+        message: `나 뭐하고 먹고 살지? 사주로 진로·재테크 성향을 알아봤어요. 궁금하면 한번 해보세요!\n${link}`,
+      });
+    } catch {
+      setShareError('지금은 공유할 수 없어요. 잠시 후 다시 시도해주세요.');
+    }
+  };
+
   return (
     <div className="canvas result-screen">
       <div className="result-screen__content">
@@ -30,11 +48,16 @@ export function ResultScreen({ result, onRestart, restartLabel = '다시 입력�
             <p className="result-card__body">{result.analysis[section.key]}</p>
           </div>
         ))}
+
+        {shareError && <p className="result-screen__error">{shareError}</p>}
       </div>
 
       <div className="result-screen__cta">
         <button type="button" className="secondary-button" onClick={onRestart}>
           {restartLabel}
+        </button>
+        <button type="button" className="primary-button" onClick={handleShare}>
+          친구에게 공유하기
         </button>
       </div>
     </div>
